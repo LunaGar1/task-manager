@@ -12,7 +12,6 @@ El proyecto consiste en el desarrollo de un sistema de gestión de tareas que fa
 - Descripción
 - Estado
 - Prioridad
-- Fecha
 
 La aplicación implementa una arquitectura cliente-servidor y utiliza una base de datos NoSQL en la nube para el almacenamiento de información. Además, el sistema incorpora el manejo y visualización de estructuras XML para representar y organizar datos jerárquicos dentro de la aplicación.
 
