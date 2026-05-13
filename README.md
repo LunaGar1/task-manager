@@ -128,7 +128,7 @@ https://task-manager-i8xa.onrender.com/
 ### Clonar el repositorio
 
 ```bash
-git clone URL_DEL_REPOSITORIO
+git clone https://github.com/LunaGar1/task-manager.git
 ```
 
 ---
