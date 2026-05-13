@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte XML</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="font-mono bg-[#1e1e2e] text-[#cdd6f4] p-[30px] min-h-screen">
+
+  <!-- Título -->
+  <h1 class="font-sans text-center mb-[30px] text-[#cba6f7] text-[22px] font-bold">
+    📊 Reporte XML — Gestión de Tareas
+  </h1>
+
+  <!-- Botones -->
+  <div class="text-center mb-5">
+    <button
+      onclick="downloadXML()"
+      class="font-sans px-5 py-2 bg-[#313244] text-[#cdd6f4] rounded-lg cursor-pointer text-sm m-[5px] hover:bg-[#45475a] transition"
+    >
+      ⬇️ Descargar XML
+    </button>
+
+    <button
+      onclick="loadReport()"
+      class="font-sans px-5 py-2 bg-[#313244] text-[#cdd6f4] rounded-lg cursor-pointer text-sm m-[5px] hover:bg-[#45475a] transition"
+    >
+      🔄 Actualizar
+    </button>
+
+    <button
+      onclick="window.location='/'"
+      class="font-sans px-5 py-2 bg-[#313244] text-[#cdd6f4] rounded-lg cursor-pointer text-sm m-[5px] hover:bg-[#45475a] transition"
+    >
+      ← Volver
+    </button>
+  </div>
+
+  <!-- Cards -->
+  <div
+    id="summary-cards"
+    class="flex gap-[15px] justify-center mb-[30px] flex-wrap"
+  ></div>
+
+  <!-- XML -->
+  <div
+    id="xml-view"
+    class="bg-[#181825] rounded-xl p-[25px] overflow-x-auto"
+  >
+    <p class="text-center py-10 text-[#6c7086] font-sans">
+      Cargando reporte...
+    </p>
+  </div>
+
+  <script>
+
+    async function loadReport() {
+      try {
+        const res = await fetch('/api/tasks/report/xml');
+
+        const xmlText = await res.text();
+
+        console.log(xmlText);
+
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(xmlText, 'application/xml');
+
+        console.log(xml);
+
+        if (xml.querySelector('parsererror')) {
+          document.getElementById('xml-view').innerHTML = `
+            <p class="text-red-400 font-sans">
+              Error al interpretar el XML
+            </p>
+          `;
+          return;
+        }
+
+        renderSummary(xml);
+        renderXMLTree(xml);
+
+      } catch (error) {
+
+        document.getElementById('xml-view').innerHTML = `
+          <p class="text-red-400 font-sans">
+            Error cargando reporte
+          </p>
+        `;
+
+        console.error(error);
+      }
+    }
+
+    function renderSummary(xml) {
+
+      const get = tag =>
+        xml.querySelector(tag)?.textContent || '0';
+
+      const total = get('total');
+      const completed = get('completed');
+      const pending = get('pending');
+      const inProgress = get('in_progress');
+      const percentage = get('percentage');
+
+      document.getElementById('summary-cards').innerHTML = `
+
+        <div class="bg-[#313244] rounded-[10px] p-[20px_30px] text-center min-w-[140px]">
+          <div class="text-[32px] font-bold font-sans text-[#89b4fa]">
+            ${total}
+          </div>
+          <div class="text-[12px] text-[#a6adc8] mt-[5px] font-sans">
+            Total
+          </div>
+        </div>
+
+        <div class="bg-[#313244] rounded-[10px] p-[20px_30px] text-center min-w-[140px]">
+          <div class="text-[32px] font-bold font-sans text-[#a6e3a1]">
+            ${completed}
+          </div>
+          <div class="text-[12px] text-[#a6adc8] mt-[5px] font-sans">
+            Completadas
+          </div>
+        </div>
+
+        <div class="bg-[#313244] rounded-[10px] p-[20px_30px] text-center min-w-[140px]">
+          <div class="text-[32px] font-bold font-sans text-[#fab387]">
+            ${pending}
+          </div>
+          <div class="text-[12px] text-[#a6adc8] mt-[5px] font-sans">
+            Pendientes
+          </div>
+        </div>
+
+        <div class="bg-[#313244] rounded-[10px] p-[20px_30px] text-center min-w-[140px]">
+          <div class="text-[32px] font-bold font-sans text-[#89dceb]">
+            ${inProgress}
+          </div>
+          <div class="text-[12px] text-[#a6adc8] mt-[5px] font-sans">
+            En progreso
+          </div>
+        </div>
+
+        <div class="bg-[#313244] rounded-[10px] p-[20px_30px] text-center min-w-[140px]">
+          <div class="text-[32px] font-bold font-sans text-[#cba6f7]">
+            ${percentage}
+          </div>
+          <div class="text-[12px] text-[#a6adc8] mt-[5px] font-sans">
+            Completado
+          </div>
+        </div>
+
+      `;
+    }
+
+    function renderXMLTree(xml) {
+
+      const tasks = xml.querySelectorAll('task');
+
+      let html = '';
+
+      html += `
+        <div class="leading-4 whitespace-pre text-[#6c7086]">
+          &lt;?xml version="1.0" encoding="UTF-8"?&gt;
+        </div>
+      `;
+
+      html += `
+        <div class="leading-4 whitespace-pre">
+          <span class="text-[#89b4fa]">&lt;report&gt;</span>
+        </div>
+      `;
+
+      // SUMMARY
+
+      html += `
+        <div class="leading-4 whitespace-pre pl-5">
+          <span class="text-[#89b4fa]">&lt;summary&gt;</span>
+        </div>
+      `;
+
+      ['total', 'completed', 'pending', 'in_progress', 'percentage']
+      .forEach(tag => {
+
+        const val =
+          xml.querySelector(tag)?.textContent || '0';
+
+        html += `
+          <div class="leading-4 whitespace-pre pl-10">
+            <span class="text-[#89b4fa]">&lt;${tag}&gt;</span>
+            <span class="text-[#a6e3a1]">${val}</span>
+            <span class="text-[#89b4fa]">&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      });
+
+      html += `
+        <div class="leading-4 whitespace-pre pl-5">
+          <span class="text-[#89b4fa]">&lt;/summary&gt;</span>
+        </div>
+      `;
+
+      // TASKS
+
+      html += `
+        <div class="leading-4 whitespace-pre pl-5">
+          <span class="text-[#89b4fa]">&lt;tasks&gt;</span>
+        </div>
+      `;
+
+      tasks.forEach(task => {
+
+        const get = tag =>
+          task.querySelector(tag)?.textContent || '';
+
+        const status = get('status');
+        const priority = get('priority');
+
+        let statusClass =
+          'bg-[#fab387] text-[#1e1e2e]';
+
+        if (status.toLowerCase().includes('complet')) {
+          statusClass = 'bg-[#a6e3a1] text-[#1e1e2e]';
+        }
+
+        if (status.toLowerCase().includes('progreso')) {
+          statusClass = 'bg-[#89dceb] text-[#1e1e2e]';
+        }
+
+        let priorityClass =
+          'bg-[#a6e3a1] text-[#1e1e2e]';
+
+        if (priority.toLowerCase().includes('media')) {
+          priorityClass = 'bg-[#f9e2af] text-[#1e1e2e]';
+        }
+
+        if (priority.toLowerCase().includes('alta')) {
+          priorityClass = 'bg-[#f38ba8] text-[#1e1e2e]';
+        }
+
+        html += `
+          <div class="border-l-2 border-[#313244] ml-10 pl-4 my-2 hover:border-[#cba6f7] transition">
+        `;
+
+        html += `
+          <div class="leading-4 whitespace-pre">
+            <span class="text-[#89b4fa]">&lt;task&gt;</span>
+          </div>
+        `;
+
+        html += `
+          <div class="leading-4 whitespace-pre pl-5">
+            <span class="text-[#89b4fa]">&lt;id&gt;</span>
+            <span class="text-[#a6e3a1]">${get('id')}</span>
+            <span class="text-[#89b4fa]">&lt;/id&gt;</span>
+          </div>
+        `;
+
+        html += `
+          <div class="leading-4 whitespace-pre pl-5">
+            <span class="text-[#89b4fa]">&lt;title&gt;</span>
+            <span class="text-[#a6e3a1]">${get('title')}</span>
+            <span class="text-[#89b4fa]">&lt;/title&gt;</span>
+          </div>
+        `;
+
+        html += `
+          <div class="leading-4 whitespace-pre pl-5">
+            <span class="text-[#89b4fa]">&lt;description&gt;</span>
+            <span class="text-[#a6e3a1]">
+              ${get('description') || '—'}
+            </span>
+            <span class="text-[#89b4fa]">&lt;/description&gt;</span>
+          </div>
+        `;
+
+        html += `
+          <div <div class="leading-5 whitespace-pre pl-3">
+            <span class="text-[#89b4fa]">&lt;status&gt;</span>
+
+            <span  class="text-[#a6e3a1]">
+              ${status}
+            </span>
+
+            <span class="text-[#89b4fa]">&lt;/status&gt;</span>
+          </div>
+        `;
+
+        html += `
+          <div class="leading-4 whitespace-pre pl-5">
+            <span class="text-[#89b4fa]">&lt;priority&gt;</span>
+
+            <span class="text-[#a6e3a1]">
+              ${priority}
+            </span>
+
+            <span class="text-[#89b4fa]">&lt;/priority&gt;</span>
+          </div>
+        `;
+
+        html += `
+          <div class="leading-4 whitespace-pre">
+            <span class="text-[#89b4fa]">&lt;/task&gt;</span>
+          </div>
+        `;
+
+        html += `</div>`;
+      });
+
+      html += `
+        <div class="leading-4 whitespace-pre pl-5">
+          <span class="text-[#89b4fa]">&lt;/tasks&gt;</span>
+        </div>
+      `;
+
+      html += `
+        <div class="leading-4 whitespace-pre">
+          <span class="text-[#89b4fa]">&lt;/report&gt;</span>
+        </div>
+      `;
+
+      document.getElementById('xml-view').innerHTML = html;
+    }
+
+    async function downloadXML() {
+
+      const res = await fetch('/api/tasks/report/xml');
+
+      const xmlText = await res.text();
+
+      const blob = new Blob(
+        [xmlText],
+        { type: 'application/xml' }
+      );
+
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+
+      a.href = url;
+      a.download = 'reporte-tareas.xml';
+
+      a.click();
+
+      URL.revokeObjectURL(url);
+    }
+
+    loadReport();
+
+  </script>
+
+</body>
+</html>

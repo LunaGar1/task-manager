@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Tareas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Space Grotesk', 'sans-serif'] },
+          colors: {
+            brand: { 50: '#f0fdf4', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Space Grotesk', sans-serif; }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .modal-enter { animation: modalIn 0.25s ease; }
+    @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  </style>
+</head>
+<body class="bg-slate-950 min-h-screen text-slate-100">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-sm">✓</div>
+        <h1 class="text-lg font-bold tracking-tight">TaskManager</h1>
+      </div>
+      <button onclick="window.open('/xml-report.html', '_blank')"
+        class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-700">
+        📄 Ver reporte XML
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-8">
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-4 mb-8" id="stats-row">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <p class="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Total</p>
+        <p class="text-2xl font-bold" id="stat-total">0</p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <p class="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Completadas</p>
+        <p class="text-2xl font-bold text-green-400" id="stat-completed">0</p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <p class="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Pendientes</p>
+        <p class="text-2xl font-bold text-amber-400" id="stat-pending">0</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Formulario -->
+      <div class="lg:col-span-1">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 sticky top-24">
+          <h2 class="font-semibold text-base mb-5 flex items-center gap-2">
+            <span class="text-green-400">＋</span> Nueva Tarea
+          </h2>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-slate-400 font-medium mb-1 block">Título *</label>
+              <input type="text" id="title" placeholder="¿Qué hay que hacer?"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-green-500 transition-colors">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 font-medium mb-1 block">Descripción</label>
+              <textarea id="description" placeholder="Detalles opcionales..." rows="3"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-green-500 transition-colors resize-none"></textarea>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 font-medium mb-1 block">Estado</label>
+              <select id="status"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-green-500 transition-colors">
+                <option value="pending">Pendiente</option>
+                <option value="in_progress">En Progreso</option>
+                <option value="completed">Completada</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 font-medium mb-1 block">Prioridad</label>
+              <select id="priority"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-green-500 transition-colors">
+                <option value="low">Baja</option>
+                <option value="medium">Media</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+            <div class="flex gap-2 pt-1">
+              <button onclick="saveTask()"
+                class="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2.5 text-sm transition-colors">
+                Guardar
+              </button>
+              <button onclick="clearForm()"
+                class="px-4 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700">
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de tareas -->
+      <div class="lg:col-span-2">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-semibold text-base">Lista de Tareas</h2>
+          <span id="task-count" class="text-xs text-slate-400 bg-slate-800 px-3 py-1 rounded-full">0 tareas</span>
+        </div>
+        <div id="tasks-list" class="space-y-3"></div>
+        <div id="empty-state" class="hidden text-center py-16 text-slate-500">
+          <p class="text-4xl mb-3">📭</p>
+          <p class="text-sm">No hay tareas todavía</p>
+          <p class="text-xs mt-1">Crea una usando el formulario</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div id="modal-overlay" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div id="modal" class="modal-enter bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl">
+
+      <!-- Vista detalle -->
+      <div id="modal-view">
+        <div class="flex items-center justify-between p-6 border-b border-slate-800">
+          <h2 class="font-semibold">Detalle de Tarea</h2>
+          <button onclick="closeModal()" class="text-slate-400 hover:text-white transition-colors text-xl leading-none">✕</button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Título</p>
+            <p id="view-title" class="font-semibold text-base"></p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Descripción</p>
+            <p id="view-description" class="text-sm text-slate-300 bg-slate-800 rounded-lg p-3"></p>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wider mb-2">Estado</p>
+              <span id="view-status-badge" class="text-xs font-semibold px-3 py-1 rounded-full"></span>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wider mb-2">Prioridad</p>
+              <span id="view-priority-badge" class="text-xs font-semibold px-3 py-1 rounded-full"></span>
+            </div>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Creada</p>
+            <p id="view-createdAt" class="text-sm text-slate-300"></p>
+          </div>
+        </div>
+        <div class="px-6 pb-6">
+          <button onclick="switchToEdit()"
+            class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg py-2.5 text-sm transition-colors">
+            ✏️ Editar tarea
+          </button>
+        </div>
+      </div>
+
+      <!-- Vista editar -->
+      <div id="modal-edit" class="hidden">
+        <div class="flex items-center justify-between p-6 border-b border-slate-800">
+          <h2 class="font-semibold">Editar Tarea</h2>
+          <button onclick="closeModal()" class="text-slate-400 hover:text-white transition-colors text-xl leading-none">✕</button>
+        </div>
+        <div class="p-6 space-y-3">
+          <input type="hidden" id="edit-id">
+          <div>
+            <label class="text-xs text-slate-400 font-medium mb-1 block">Título *</label>
+            <input type="text" id="edit-title"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-green-500 transition-colors">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 font-medium mb-1 block">Descripción</label>
+            <textarea id="edit-description" rows="3"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-green-500 transition-colors resize-none"></textarea>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 font-medium mb-1 block">Estado</label>
+            <select id="edit-status"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-green-500 transition-colors">
+              <option value="pending">Pendiente</option>
+              <option value="in_progress">En Progreso</option>
+              <option value="completed">Completada</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 font-medium mb-1 block">Prioridad</label>
+            <select id="edit-priority"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-green-500 transition-colors">
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+            </select>
+          </div>
+        </div>
+        <div class="px-6 pb-6 flex gap-2">
+          <button onclick="updateTask()"
+            class="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2.5 text-sm transition-colors">
+            💾 Guardar cambios
+          </button>
+          <button onclick="switchToView()"
+            class="px-4 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700">
+            ←
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/tasks';
+    let currentTask = null;
+
+    const statusConfig = {
+      pending:     { label: 'Pendiente',   classes: 'bg-amber-500/20 text-amber-400' },
+      in_progress: { label: 'En Progreso', classes: 'bg-blue-500/20 text-blue-400' },
+      completed:   { label: 'Completada',  classes: 'bg-green-500/20 text-green-400' }
+    };
+
+    const priorityConfig = {
+      low:    { label: 'Baja',  classes: 'bg-slate-700 text-slate-300' },
+      medium: { label: 'Media', classes: 'bg-amber-500/20 text-amber-400' },
+      high:   { label: 'Alta',  classes: 'bg-red-500/20 text-red-400' }
+    };
+
+    async function loadTasks() {
+      const res = await fetch(API);
+      const tasks = await res.json();
+      const list = document.getElementById('tasks-list');
+      const empty = document.getElementById('empty-state');
+      const count = document.getElementById('task-count');
+
+      const total = tasks.length;
+      const completed = tasks.filter(t => t.status === 'completed').length;
+      const pending = tasks.filter(t => t.status === 'pending').length;
+
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-completed').textContent = completed;
+      document.getElementById('stat-pending').textContent = pending;
+      count.textContent = `${total} tarea${total !== 1 ? 's' : ''}`;
+
+      if (tasks.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+      list.innerHTML = tasks.map(task => {
+        const s = statusConfig[task.status];
+        const p = priorityConfig[task.priority];
+        const desc = task.description ? `<p class="text-xs text-slate-400 mt-1 truncate">${task.description}</p>` : '';
+        return `
+          <div class="fade-in bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-4 transition-colors">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm">${task.title}</p>
+                ${desc}
+                <div class="flex items-center gap-2 mt-3">
+                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${s.classes}">${s.label}</span>
+                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${p.classes}">${p.label}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button onclick="openModal('${task._id}')"
+                  class="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white text-sm">
+                  👁️
+                </button>
+                <button onclick="deleteTask('${task._id}')"
+                  class="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-slate-400 hover:text-red-400 text-sm">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    async function openModal(id) {
+      const res = await fetch(`${API}/${id}`);
+      currentTask = await res.json();
+      const s = statusConfig[currentTask.status];
+      const p = priorityConfig[currentTask.priority];
+
+      document.getElementById('view-title').textContent = currentTask.title;
+      document.getElementById('view-description').textContent = currentTask.description || '—';
+      const sb = document.getElementById('view-status-badge');
+      sb.textContent = s.label; sb.className = `text-xs font-semibold px-3 py-1 rounded-full ${s.classes}`;
+      const pb = document.getElementById('view-priority-badge');
+      pb.textContent = p.label; pb.className = `text-xs font-semibold px-3 py-1 rounded-full ${p.classes}`;
+      document.getElementById('view-createdAt').textContent = new Date(currentTask.createdAt).toLocaleString('es-CO');
+
+      document.getElementById('modal-view').classList.remove('hidden');
+      document.getElementById('modal-edit').classList.add('hidden');
+      document.getElementById('modal-overlay').classList.remove('hidden');
+    }
+
+    function switchToEdit() {
+      document.getElementById('edit-id').value = currentTask._id;
+      document.getElementById('edit-title').value = currentTask.title;
+      document.getElementById('edit-description').value = currentTask.description;
+      document.getElementById('edit-status').value = currentTask.status;
+      document.getElementById('edit-priority').value = currentTask.priority;
+      document.getElementById('modal-view').classList.add('hidden');
+      document.getElementById('modal-edit').classList.remove('hidden');
+    }
+
+    function switchToView() {
+      document.getElementById('modal-view').classList.remove('hidden');
+      document.getElementById('modal-edit').classList.add('hidden');
+    }
+
+    async function updateTask() {
+      const id = document.getElementById('edit-id').value;
+      const data = {
+        title: document.getElementById('edit-title').value,
+        description: document.getElementById('edit-description').value,
+        status: document.getElementById('edit-status').value,
+        priority: document.getElementById('edit-priority').value
+      };
+      if (!data.title) return alert('El título es obligatorio');
+      await fetch(`${API}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      closeModal();
+      loadTasks();
+    }
+
+    async function saveTask() {
+      const data = {
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        status: document.getElementById('status').value,
+        priority: document.getElementById('priority').value
+      };
+      if (!data.title) return alert('El título es obligatorio');
+      await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      clearForm();
+      loadTasks();
+    }
+
+    async function deleteTask(id) {
+      if (confirm('¿Eliminar esta tarea?')) {
+        await fetch(`${API}/${id}`, { method: 'DELETE' });
+        loadTasks();
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.add('hidden');
+      currentTask = null;
+    }
+
+    document.getElementById('modal-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    function clearForm() {
+      document.getElementById('title').value = '';
+      document.getElementById('description').value = '';
+      document.getElementById('status').value = 'pending';
+      document.getElementById('priority').value = 'medium';
+    }
+    
+    loadTasks();
+  </script>
+</body>
+</html>
