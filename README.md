@@ -174,5 +174,3 @@ npm start
 ## Autor
 
 Luna Penagos Garcia
-
-Juan Jose Alzate Garcia
